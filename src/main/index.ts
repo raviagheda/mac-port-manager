@@ -42,7 +42,7 @@ function bootstrap(): void {
       scanLoop.setPollingActive(false);
     },
     onKillAllDevPorts: () => {
-      const killable = scanLoop.getSnapshot().filter((e) => !e.protected);
+      const killable = scanLoop.getSnapshot().filter((e) => e.category === 'dev' && !e.protected);
       if (killable.length === 0) return;
 
       const list = killable.map((e) => `:${e.port} — ${e.project?.name ?? e.process?.comm ?? e.command}`).join('\n');
