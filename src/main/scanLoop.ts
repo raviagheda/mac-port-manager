@@ -1,18 +1,10 @@
-import type { PortCategory, PortEntry, PortListPatch, Settings } from '@shared/types';
+import { homedir } from 'node:os';
+import type { PortEntry, PortListPatch, Settings } from '@shared/types';
+import { classifyPort } from './services/classifier';
 import { getProcessInfo } from './services/processInfo';
 import { detectProject } from './services/projectDetector';
 import { isProtectedProcess } from './services/killer';
 import { scanListeningPorts, type RawPortEntry } from './services/portScanner';
-
-const DATABASE_COMMANDS = new Set(['postgres', 'postgres.bin', 'mysqld', 'redis-server', 'mongod']);
-
-function categorize(isProtected: boolean, comm: string): PortCategory {
-  const lowerComm = comm.toLowerCase();
-  if (DATABASE_COMMANDS.has(comm) || DATABASE_COMMANDS.has(lowerComm)) return 'database';
-  if (lowerComm.includes('docker')) return 'docker';
-  if (isProtected) return 'system';
-  return 'dev';
-}
 
 async function buildPortEntry(raw: RawPortEntry): Promise<PortEntry> {
   const process_ = await getProcessInfo(raw.pid);
@@ -22,7 +14,7 @@ async function buildPortEntry(raw: RawPortEntry): Promise<PortEntry> {
     pid: raw.pid,
     user: process_?.user ?? '',
     cwd: process_?.cwd ?? null,
-    execPath: null
+    execPath: process_?.execPath ?? null
   });
 
   // Prefer lsof's command field over ps's `comm`: macOS truncates `ps -o
@@ -40,7 +32,15 @@ async function buildPortEntry(raw: RawPortEntry): Promise<PortEntry> {
     pid: raw.pid,
     command: raw.command,
     state: 'LISTEN',
-    category: categorize(protectedFlag, comm),
+    category: classifyPort({
+      comm,
+      execPath: process_?.execPath ?? null,
+      cwd: process_?.cwd ?? null,
+      ppid: process_?.ppid ?? null,
+      isProtected: protectedFlag,
+      hasProject: project !== null,
+      homeDir: homedir()
+    }),
     process: process_ ?? undefined,
     project: project ?? undefined,
     protected: protectedFlag,

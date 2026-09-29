@@ -1,4 +1,4 @@
-export type PortCategory = 'dev' | 'database' | 'docker' | 'system' | 'unknown';
+export type PortCategory = 'dev' | 'database' | 'docker' | 'app' | 'service' | 'system' | 'unknown';
 
 export interface ProcessInfo {
   pid: number;
@@ -10,6 +10,8 @@ export interface ProcessInfo {
   comm: string;
   args: string;
   cwd: string | null;
+  /** Full path of the main executable (first `txt` fd from lsof). */
+  execPath: string | null;
 }
 
 export interface ProjectInfo {

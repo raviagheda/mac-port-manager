@@ -70,26 +70,34 @@ export function parseEtime(etime: string): number {
 }
 
 /**
- * Parses `lsof -a -p <pid> -d cwd -Fn` output, e.g.:
- *   p97894
+ * Parses `lsof -a -p <pid> -d cwd,txt -Fn` output, e.g.:
+ *   p24978
  *   fcwd
- *   n/Users/ravi/Documents/Lab/Projects/port-manager
- * Returns null on empty/permission-denied output rather than throwing —
- * root-owned PIDs will legitimately fail this lookup for a non-root caller.
+ *   n/opt/homebrew/var/db/redis
+ *   ftxt
+ *   n/opt/homebrew/Cellar/redis/7.2.5/bin/redis-server
+ *   ftxt
+ *   n/usr/lib/dyld
+ * The first `txt` entry is the main executable; later ones are mapped
+ * dylibs and are ignored. Missing fields come back null rather than
+ * throwing — root-owned PIDs will legitimately fail this lookup for a
+ * non-root caller.
  */
-export function parseCwdOutput(raw: string): string | null {
-  const lines = raw.split('\n');
-  let sawCwdFd = false;
-  for (const line of lines) {
-    if (line === 'fcwd') {
-      sawCwdFd = true;
-      continue;
-    }
-    if (sawCwdFd && line.startsWith('n')) {
-      return line.slice(1);
+export function parseFdPaths(raw: string): { cwd: string | null; execPath: string | null } {
+  let cwd: string | null = null;
+  let execPath: string | null = null;
+  let currentFd: string | null = null;
+  for (const line of raw.split('\n')) {
+    if (line.startsWith('f')) {
+      currentFd = line.slice(1);
+    } else if (line.startsWith('n') && currentFd !== null) {
+      const path = line.slice(1);
+      if (currentFd === 'cwd' && cwd === null) cwd = path;
+      if (currentFd === 'txt' && execPath === null) execPath = path;
+      currentFd = null;
     }
   }
-  return null;
+  return { cwd, execPath };
 }
 
 export async function getProcessInfo(pid: number): Promise<ProcessInfo | null> {
@@ -100,9 +108,9 @@ export async function getProcessInfo(pid: number): Promise<ProcessInfo | null> {
     String(pid)
   ]).catch(() => null);
 
-  const cwdPromise = execFileAsync('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn']).catch(() => null);
+  const fdPromise = execFileAsync('lsof', ['-a', '-p', String(pid), '-d', 'cwd,txt', '-Fn']).catch(() => null);
 
-  const [psResult, cwdResult] = await Promise.all([psPromise, cwdPromise]);
+  const [psResult, fdResult] = await Promise.all([psPromise, fdPromise]);
   if (psResult === null) return null;
 
   const line = psResult.stdout.split('\n').find((l) => l.trim().length > 0);
@@ -111,7 +119,7 @@ export async function getProcessInfo(pid: number): Promise<ProcessInfo | null> {
   const raw = parsePsLine(line);
   if (!raw) return null;
 
-  const cwd = cwdResult !== null ? parseCwdOutput(cwdResult.stdout) : null;
+  const { cwd, execPath } = fdResult !== null ? parseFdPaths(fdResult.stdout) : { cwd: null, execPath: null };
 
   return {
     pid: raw.pid,
@@ -122,6 +130,7 @@ export async function getProcessInfo(pid: number): Promise<ProcessInfo | null> {
     memoryKb: raw.memoryKb,
     comm: raw.comm,
     args: raw.args,
-    cwd
+    cwd,
+    execPath
   };
 }

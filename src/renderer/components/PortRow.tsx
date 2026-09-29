@@ -8,6 +8,8 @@ const CATEGORY_STYLES: Record<PortEntry['category'], string> = {
   dev: 'bg-accent/15 text-accent',
   database: 'bg-warning/15 text-warning',
   docker: 'bg-[#38bdf8]/15 text-[#38bdf8]',
+  app: 'bg-fg/10 text-fg/50',
+  service: 'bg-fg/10 text-fg/50',
   system: 'bg-fg/10 text-fg/50',
   unknown: 'bg-fg/10 text-fg/50'
 };
@@ -59,7 +61,10 @@ export default function PortRow({ entry, isSelected, isExpanded, killState }: Po
       tabIndex={0}
     >
       <div className="flex items-center gap-3">
-        <span className={`font-mono text-[12px] px-1.5 py-0.5 rounded ${CATEGORY_STYLES[entry.category]}`}>{entry.port}</span>
+        <span
+          title={entry.category}
+          className={`font-mono text-[12px] px-1.5 py-0.5 rounded ${CATEGORY_STYLES[entry.category]}`}
+        >{entry.port}</span>
 
         <button
           type="button"

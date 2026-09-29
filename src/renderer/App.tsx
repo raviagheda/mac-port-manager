@@ -14,9 +14,12 @@ export default function App(): JSX.Element {
   const ports = usePortStore((s) => s.ports);
   const order = usePortStore((s) => s.order);
   const searchQuery = usePortStore((s) => s.searchQuery);
+  const scope = usePortStore((s) => s.scope);
 
   const allEntries = useMemo(() => order.map((id) => ports[id]).filter((e) => e !== undefined), [ports, order]);
-  const visibleEntries = useMemo(() => filterPorts(allEntries, searchQuery), [allEntries, searchQuery]);
+  const devEntries = useMemo(() => allEntries.filter((e) => e.category === 'dev'), [allEntries]);
+  const scopedEntries = scope === 'dev' ? devEntries : allEntries;
+  const visibleEntries = useMemo(() => filterPorts(scopedEntries, searchQuery), [scopedEntries, searchQuery]);
 
   useKeyboardNav(visibleEntries);
 
@@ -29,7 +32,8 @@ export default function App(): JSX.Element {
     });
   }, []);
 
-  const devPortCount = allEntries.filter((e) => e.category === 'dev').length;
+  const devPortCount = devEntries.length;
+  const hiddenCount = scope === 'dev' ? allEntries.length - devEntries.length : 0;
 
   return (
     <motion.div
@@ -39,8 +43,8 @@ export default function App(): JSX.Element {
       transition={{ duration: 0.18, ease: 'easeOut' }}
       className="relative h-full w-full flex flex-col bg-glass/[0.72] backdrop-blur-2xl border border-border/[0.08] rounded-2xl overflow-hidden"
     >
-      <SearchBar />
-      <PortList entries={visibleEntries} />
+      <SearchBar devCount={devPortCount} allCount={allEntries.length} />
+      <PortList entries={visibleEntries} hiddenCount={hiddenCount} />
       <Toast />
 
       <div className="flex items-center justify-between px-3 py-2 border-t border-border/[0.08] text-[11px] text-fg/45">

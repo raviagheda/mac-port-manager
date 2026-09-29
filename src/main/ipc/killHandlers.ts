@@ -10,7 +10,7 @@ function protectedInputFor(scanLoop: ScanLoop, pid: number): ProtectedCheckInput
     pid,
     user: entry?.process?.user ?? '',
     cwd: entry?.process?.cwd ?? null,
-    execPath: null
+    execPath: entry?.process?.execPath ?? null
   };
 }
 

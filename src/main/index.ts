@@ -60,7 +60,7 @@ function bootstrap(): void {
           killer.request(
             entry.pid,
             entry.port,
-            { pid: entry.pid, user: entry.process?.user ?? '', cwd: entry.process?.cwd ?? null, execPath: null },
+            { pid: entry.pid, user: entry.process?.user ?? '', cwd: entry.process?.cwd ?? null, execPath: entry.process?.execPath ?? null },
             settings
           );
         }

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parseCwdOutput, parseEtime, parsePsLine } from '../processInfo';
+import { parseEtime, parseFdPaths, parsePsLine } from '../processInfo';
 
 // Lines below were captured live via `ps -o pid=,ppid=,user=,etime=,%cpu=,rss=,comm=,args= -p <pid>`
-// and `lsof -a -p <pid> -d cwd -Fn` on a real macOS machine.
+// and `lsof -a -p <pid> -d cwd,txt -Fn` on a real macOS machine.
 
 describe('parsePsLine', () => {
   it('parses a real python http.server line', () => {
@@ -71,19 +71,24 @@ describe('parseEtime', () => {
   });
 });
 
-describe('parseCwdOutput', () => {
-  it('parses a real cwd fixture', () => {
-    const raw = 'p482\nfcwd\nn/Users/ravi/Documents/Lab/Projects/port-manager\n';
-    expect(parseCwdOutput(raw)).toBe('/Users/ravi/Documents/Lab/Projects/port-manager');
+describe('parseFdPaths', () => {
+  it('parses cwd and the main executable, ignoring later dylib txt entries', () => {
+    const raw =
+      'p24978\nfcwd\nn/opt/homebrew/var/db/redis\nftxt\nn/opt/homebrew/Cellar/redis/7.2.5/bin/redis-server\n' +
+      'ftxt\nn/opt/homebrew/Cellar/openssl@3/3.6.4/lib/libssl.3.dylib\nftxt\nn/usr/lib/dyld\n';
+    expect(parseFdPaths(raw)).toEqual({
+      cwd: '/opt/homebrew/var/db/redis',
+      execPath: '/opt/homebrew/Cellar/redis/7.2.5/bin/redis-server'
+    });
   });
 
-  it('parses a real cwd fixture for a homebrew-installed daemon', () => {
-    const raw = 'p938\nfcwd\nn/opt/homebrew\n';
-    expect(parseCwdOutput(raw)).toBe('/opt/homebrew');
+  it('parses an app-bundle executable with spaces in its path', () => {
+    const raw = 'p25003\nfcwd\nn/\nftxt\nn/Applications/Antigravity IDE.app/Contents/MacOS/Electron\n';
+    expect(parseFdPaths(raw)).toEqual({ cwd: '/', execPath: '/Applications/Antigravity IDE.app/Contents/MacOS/Electron' });
   });
 
-  it('returns null for empty or permission-denied output', () => {
-    expect(parseCwdOutput('')).toBeNull();
-    expect(parseCwdOutput('p1\n')).toBeNull();
+  it('returns nulls for empty or permission-denied output', () => {
+    expect(parseFdPaths('')).toEqual({ cwd: null, execPath: null });
+    expect(parseFdPaths('p1\n')).toEqual({ cwd: null, execPath: null });
   });
 });

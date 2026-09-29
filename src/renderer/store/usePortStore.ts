@@ -1,16 +1,20 @@
 import { create } from 'zustand';
 import type { KillResult, PortEntry, PortListPatch } from '@shared/types';
 
+export type PortScope = 'dev' | 'all';
+
 interface PortStoreState {
   ports: Record<string, PortEntry>;
   order: string[];
   selectedId: string | null;
   expandedId: string | null;
   searchQuery: string;
+  scope: PortScope;
   killStates: Record<number, KillResult>;
   setSnapshot(ports: PortEntry[]): void;
   applyPatch(patch: PortListPatch): void;
   setSearchQuery(query: string): void;
+  setScope(scope: PortScope): void;
   setSelected(id: string | null): void;
   setExpanded(id: string | null): void;
   applyKillUpdate(result: KillResult): void;
@@ -28,6 +32,7 @@ export const usePortStore = create<PortStoreState>((set, get) => ({
   selectedId: null,
   expandedId: null,
   searchQuery: '',
+  scope: 'dev',
   killStates: {},
 
   setSnapshot: (entries) => {
@@ -44,6 +49,7 @@ export const usePortStore = create<PortStoreState>((set, get) => ({
   },
 
   setSearchQuery: (query) => set({ searchQuery: query }),
+  setScope: (scope) => set({ scope }),
   setSelected: (id) => set({ selectedId: id }),
   setExpanded: (id) => set({ expandedId: id }),
 

@@ -6,15 +6,17 @@ import EmptyState from './EmptyState';
 
 interface PortListProps {
   entries: PortEntry[];
+  /** Non-dev listeners filtered out by the current scope. */
+  hiddenCount: number;
 }
 
-export default function PortList({ entries }: PortListProps): JSX.Element {
+export default function PortList({ entries, hiddenCount }: PortListProps): JSX.Element {
   const selectedId = usePortStore((s) => s.selectedId);
   const expandedId = usePortStore((s) => s.expandedId);
   const killStates = usePortStore((s) => s.killStates);
 
   if (entries.length === 0) {
-    return <EmptyState />;
+    return <EmptyState hiddenCount={hiddenCount} />;
   }
 
   return (
